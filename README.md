@@ -19,4 +19,5 @@ dealing with the complexities of JNI directly (and Android API).
 
 ## How use?
 
+[Mini guide](./USAGE.md).
 One full example how use this lib in my [SDL-JNI](https://github.com/shortice/SDL-Jni) repository.
