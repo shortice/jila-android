@@ -61,11 +61,14 @@ Before you can use any of the JILA functions, you must initialize it with the An
 #include <jni.h>
 
 // Somewhere in your initialization code where you have access to the JNIEnv and Activity/Context
-void Init(JNIEnv* env, jobject context) {
-    // Code for Get android Activity Context
-    if (Jila_Android_InitContext(env, context) != 0) {
+void Init() {
+    JNIEnv* env, jobject context;
+    // <...> Code for get JNIEnv + Android activity context
+
+    // Then
+    if (!Jila_Android_InitContext(env, context)) {
         // Handle initialization error
-        char* error = Jila_GetError();
+        const char* error = Jila_Android_GetError();
         // Log the error...
     }
 }
@@ -74,6 +77,10 @@ void Init(JNIEnv* env, jobject context) {
 ## 4. Use it.
 
 Explore available API in the jila-android.hpp file. Documentation maybe soon.
+
+:::note
+All there API's is not thread-safe at this moment.
+:::
 
 -----
 
