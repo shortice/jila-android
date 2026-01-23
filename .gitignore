@@ -37,3 +37,4 @@ google-services.json
 .vscode
 
 compile_commands.json
+*.class

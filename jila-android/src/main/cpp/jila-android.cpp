@@ -1,3 +1,26 @@
+/*
+MIT License
+
+Copyright (c) 2025 Shortice
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
 #include <jni.h>
 #include <string>
 #include "jila-android.hpp"
@@ -6,8 +29,7 @@
 
 static JavaVM* j_JavaVM = nullptr;
 
-static jobject j_Context = nullptr;
-static jobject j_JilaClass = nullptr;
+static jobject j_JilaObject = nullptr;
 
 static std::string g_LastError;
 static onFolderOpen onFolderOpenCallback = NULL;
@@ -109,22 +131,15 @@ bool Jila_Android_InitContext(JNIEnv* env_, jobject context) {
         return false;
     }
 
-    JNIEnv* env = env_; // Use the passed env for initialization
-
-    j_Context = env->NewGlobalRef(context);
-
-    if (j_Context == nullptr) {
-        Jila_Android_SetError("Failed to create global reference for context");
+    if (context == nullptr) {
+        Jila_Android_SetError("context is null");
         return false;
     }
+
+    JNIEnv* env = env_; // Use the passed env for initialization
 
     // Find Jila class and create object
     jclass jilaClass = env->FindClass("org/jila/android/Jila");
-
-    if (jilaClass == nullptr) {
-        Jila_Android_SetError("Failed to find class org/jila/android/Jila");
-        return false;
-    }
 
     jmethodID constructorJila = env->GetMethodID(
         jilaClass,
@@ -132,16 +147,19 @@ bool Jila_Android_InitContext(JNIEnv* env_, jobject context) {
         "(Landroid/content/Context;)V"
     );
 
-    if (constructorJila == nullptr) {
-        Jila_Android_SetError("Failed to find jila constructor");
-        return false;
-    }
-    j_JilaClass = env->NewGlobalRef(env->NewObject(jilaClass, constructorJila, j_Context));
-    
-    if (j_JilaClass == nullptr) {
-        Jila_Android_SetError("Failed to create global ref for Jila object");
-        return false;
-    }
+
+    jobject temp_object = env->NewObject(
+        jilaClass, 
+        constructorJila, 
+        context
+    );
+
+    j_JilaObject = env->NewGlobalRef(
+        temp_object
+    );
+
+    env->DeleteLocalRef(temp_object);
+    env->DeleteLocalRef(context);
 
     // Cache method IDs
 
@@ -170,8 +188,6 @@ bool Jila_Android_InitContext(JNIEnv* env_, jobject context) {
         "(Ljava/lang/String;Z)[Ljava/lang/String;"
         // (String, bool) -> String[]
     );
-    
-    // TODO: improve errors?
 
     env->DeleteLocalRef(jilaClass);
 
@@ -191,7 +207,7 @@ bool Jila_Android_CreateNotificationChannel(
     jstring jChannelDescription = env->NewStringUTF(channelDescription);
 
     env->CallVoidMethod(
-        j_JilaClass,
+        j_JilaObject,
         j_CreateNotificationChannelMethodID,
         jChannelId,
         jChannelName,
@@ -213,14 +229,14 @@ bool Jila_Android_PushNotification(
     int smallIconResId
 ) {
     JNIEnv* env = GetJNIEnv();
-    if (!env) return false;
+    if (!env or !j_PushNotificationMethodID) return false;
 
     jstring jChannelId = env->NewStringUTF(channelId);
     jstring jTitle = env->NewStringUTF(title);
     jstring jText = env->NewStringUTF(text);
 
     env->CallVoidMethod(
-        j_JilaClass,
+        j_JilaObject,
         j_PushNotificationMethodID,
         jChannelId,
         notificationId,
@@ -239,13 +255,13 @@ bool Jila_Android_PushNotification(
 
 int Jila_Android_GetResID(const char* name, const char* defType) {
     JNIEnv* env = GetJNIEnv();
-    if (!env) return 0;
+    if (!env or !j_GetResID) return 0;
 
     jstring _name = env->NewStringUTF(name);
     jstring _defType = env->NewStringUTF(defType);
 
     jint result = env->CallIntMethod(
-        j_JilaClass,
+        j_JilaObject,
         j_GetResID,
         _name,
         _defType
@@ -261,24 +277,24 @@ int Jila_Android_GetResID(const char* name, const char* defType) {
 
 void Jila_Android_OpenFolder(onFolderOpen callback) {
     JNIEnv* env = GetJNIEnv();
-    if (!env) return;
+    if (!env or !j_OpenFolder) return;
 
     onFolderOpenCallback = callback;
 
     env->CallVoidMethod(
-        j_JilaClass,
+        j_JilaObject,
         j_OpenFolder
     );
 }
 
 const char** Jila_Android_IterateFiles(const char* folder_uri, bool recursive) {
     JNIEnv* env = GetJNIEnv();
-    if (!env) return NULL;
+    if (!env or !j_IterateFiles) return NULL;
 
     jstring uri = env->NewStringUTF(folder_uri);
 
     jobjectArray files_arrays = (jobjectArray)env->CallObjectMethod(
-        j_JilaClass,
+        j_JilaObject,
         j_IterateFiles,
         uri,
         (jboolean)recursive
@@ -290,6 +306,13 @@ const char** Jila_Android_IterateFiles(const char* folder_uri, bool recursive) {
     }
 
     jsize length = env->GetArrayLength(files_arrays);
+
+    if (length == 0) {
+        env->DeleteLocalRef(uri);
+        env->DeleteLocalRef(files_arrays);
+
+        return NULL;
+    }
 
     const char** result_array = (const char**)malloc(
         (length + 1) * sizeof(char*)
@@ -311,12 +334,8 @@ const char** Jila_Android_IterateFiles(const char* folder_uri, bool recursive) {
             file_uri_js, NULL
         );
 
-        if (temp_chars != NULL) {
-            result_array[i] = strdup(temp_chars);
-            env->ReleaseStringUTFChars(file_uri_js, temp_chars);
-        } else {
-            result_array[i] = NULL;
-        }
+        result_array[i] = strdup(temp_chars);
+        env->ReleaseStringUTFChars(file_uri_js, temp_chars);
 
         env->DeleteLocalRef(file_uri_js);
     }
