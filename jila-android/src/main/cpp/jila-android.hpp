@@ -94,12 +94,12 @@ Open Android open folder dialog.
 void Jila_Android_OpenFolder(onFolderOpen callback);
 
 /*
-Returns a array of files in folder (a array of android "content://" uri) 
+Returns a array of files/directories in folder (a array of android "content://" uri) 
 or NULL if fails.
 
 Please clear this return array by using free when you done using it.
 */
-const char** Jila_Android_IterateFiles(const char* folder_uri, bool recursive);
+const char** Jila_Android_IterateFs(const char* folder_uri, bool recursive, bool iterFolders);
 
 
 #ifdef __cplusplus

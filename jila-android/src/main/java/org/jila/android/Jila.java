@@ -91,19 +91,18 @@ public class Jila {
 
     public void OpenFolder() {
         Intent intent = new Intent(appContext, FolderPickerActivity.class);
-	
-	intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+	    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
         appContext.startActivity(intent);
     }
 
-    public String[] IterateFiles(String contentUri, boolean recursive) {
+    public String[] IterateFs(String contentUri, boolean recursive, boolean iterDirectory) {
         List<String> fileList = new ArrayList<>();
         Uri rootUri = Uri.parse(contentUri);
         
         String documentId = DocumentsContract.getTreeDocumentId(rootUri);
         
-        listChildDocuments(rootUri, documentId, recursive, fileList);
+        listChildDocuments(rootUri, documentId, recursive, fileList, iterDirectory);
         
         return fileList.toArray(new String[0]);
     }
@@ -112,7 +111,8 @@ public class Jila {
         Uri treeUri, 
         String parentDocId, 
         boolean recursive, 
-        List<String> results
+        List<String> results,
+        boolean iterDirectory
     ) {
         Uri childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, parentDocId);
         ContentResolver resolver = appContext.getContentResolver();
@@ -131,12 +131,19 @@ public class Jila {
                     String mimeType = cursor.getString(1);
 
                     if (DocumentsContract.Document.MIME_TYPE_DIR.equals(mimeType)) {
+                        if (iterDirectory) {
+                            Uri fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
+                            results.add(fileUri.toString());
+                        }
+                        
                         if (recursive) {
-                            listChildDocuments(treeUri, docId, true, results);
+                            listChildDocuments(treeUri, docId, true, results, iterDirectory);
                         }
                     } else {
-                        Uri fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
-                        results.add(fileUri.toString());
+                        if (!iterDirectory) {
+                            Uri fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId);
+                            results.add(fileUri.toString());
+                        }
                     }
                 }
             }

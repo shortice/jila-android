@@ -71,6 +71,7 @@ JNIEnv* GetJNIEnv() {
     }
 
     // TODO: multi-thread support
+    // NOTE: we really want this?
 
     return env;
 }
@@ -184,9 +185,9 @@ bool Jila_Android_InitContext(JNIEnv* env_, jobject context) {
     );
 
     j_IterateFiles = GetMethodID_(
-        env, jilaClass, "IterateFiles",
-        "(Ljava/lang/String;Z)[Ljava/lang/String;"
-        // (String, bool) -> String[]
+        env, jilaClass, "IterateFs",
+        "(Ljava/lang/String;ZZ)[Ljava/lang/String;"
+        // (String, bool, bool) -> String[]
     );
 
     env->DeleteLocalRef(jilaClass);
@@ -287,7 +288,7 @@ void Jila_Android_OpenFolder(onFolderOpen callback) {
     );
 }
 
-const char** Jila_Android_IterateFiles(const char* folder_uri, bool recursive) {
+const char** Jila_Android_IterateFs(const char* folder_uri, bool recursive, bool iterFolders) {
     JNIEnv* env = GetJNIEnv();
     if (!env or !j_IterateFiles) return NULL;
 
@@ -297,7 +298,8 @@ const char** Jila_Android_IterateFiles(const char* folder_uri, bool recursive) {
         j_JilaObject,
         j_IterateFiles,
         uri,
-        (jboolean)recursive
+        (jboolean)recursive,
+        (jboolean)iterFolders
     );
 
     if (files_arrays == NULL) {
