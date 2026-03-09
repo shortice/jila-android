@@ -1,6 +1,6 @@
 # JILA Android Gradle Plugin
 
-JILA is a lightweight Android library that provides a C++ interface to 
+JILA Android is a lightweight Android library that provides a C++ interface to 
 high-level Android API. Written for the Jila framework, but it's 
 designed to be easily integrated into any C++-based library with
 included basic Android support.
