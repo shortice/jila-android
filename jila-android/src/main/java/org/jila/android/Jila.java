@@ -1,7 +1,6 @@
 package org.jila.android;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -51,6 +50,7 @@ public class Jila {
     }
 
     // Method to push a notification
+    @SuppressWarnings("deprecation")
     public void PushNotification(
         String channelId,
         int notificationId,
@@ -152,5 +152,9 @@ public class Jila {
         } finally {
             if (cursor != null) cursor.close();
         }
+    }
+
+    public String getNLDir() {
+        return appContext.getApplicationInfo().nativeLibraryDir;
     }
 }

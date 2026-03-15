@@ -40,6 +40,7 @@ static jmethodID j_PushNotificationMethodID = nullptr;
 static jmethodID j_GetResID = nullptr;
 static jmethodID j_OpenFolder = nullptr;
 static jmethodID j_IterateFiles = nullptr;
+static jmethodID j_getNLDir = nullptr;
 
 // === Helper functions
 
@@ -190,6 +191,11 @@ bool Jila_Android_InitContext(JNIEnv* env_, jobject context) {
         // (String, bool, bool) -> String[]
     );
 
+    j_getNLDir = GetMethodID_(
+        env, jilaClass, "getNLDir",
+        "()Ljava/lang/String;"
+    );
+
     env->DeleteLocalRef(jilaClass);
 
     return true;
@@ -333,7 +339,7 @@ const char** Jila_Android_IterateFs(const char* folder_uri, bool recursive, bool
         );
 
         const char* temp_chars = env->GetStringUTFChars(
-            file_uri_js, NULL
+            file_uri_js, NULL // TODO: maybe replace strdup to isCopy argument?
         );
 
         result_array[i] = strdup(temp_chars);
@@ -350,4 +356,18 @@ const char** Jila_Android_IterateFs(const char* folder_uri, bool recursive, bool
     return result_array;
 }
 
+const char* Jila_Android_GetNLDir() {
+    JNIEnv* env = GetJNIEnv();
+    if (!env or !j_getNLDir) return NULL;
+
+    jstring object = (jstring)env->CallObjectMethod(j_JilaObject, j_getNLDir);
+
+    const char* temp = env->GetStringUTFChars(object, NULL);
+
+    const char* nativeLibPath = strdup(temp);
+
+    env->ReleaseStringUTFChars(object, temp);
+
+    return nativeLibPath;
+}
 

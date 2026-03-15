@@ -101,6 +101,12 @@ Please clear this return array by using free when you done using it.
 */
 const char** Jila_Android_IterateFs(const char* folder_uri, bool recursive, bool iterFolders);
 
+/*
+Returns a `NativeLibraryDir` variable from Application info.
+
+Please clear this return value by using free when you done using it.
+*/
+const char* Jila_Android_GetNLDir();
 
 #ifdef __cplusplus
 }
